@@ -86,14 +86,51 @@ public class InputPermissionsTag extends IncludeTag {
 	@Override
 	public int doEndTag() throws JspException {
 		try {
-			doTag(getPage(), _formName, _modelName, pageContext);
-
+			
+			//doTag(getPage(), _formName, _modelName, pageContext);
+			
+			//12/12 - LPS30219 http://issues.liferay.com/browse/LPS-30219
+			doTag(getCustomPage(pageContext.getServletContext(), (HttpServletRequest)pageContext.getRequest(), getPage()), _formName, _modelName, pageContext);
+			
 			return EVAL_PAGE;
 		}
 		catch (Exception e) {
 			throw new JspException(e);
 		}
 	}
+	
+	//12/12 - LPS30219 http://issues.liferay.com/browse/LPS-30219
+	protected String getCustomPage(ServletContext servletContext, HttpServletRequest request, String path) {
+
+		ThemeDisplay themeDisplay = (ThemeDisplay)request.getAttribute(
+			WebKeys.THEME_DISPLAY);
+
+		if (themeDisplay == null) {
+			return null;
+		}
+
+		Group group = themeDisplay.getScopeGroup();
+
+		UnicodeProperties typeSettingsProperties =
+			group.getTypeSettingsProperties();
+
+		String customJspServletContextName = typeSettingsProperties.getProperty(
+			"customJspServletContextName");
+
+		if (Validator.isNull(customJspServletContextName)) {
+			return path;
+		}
+
+		String customPage = CustomJspRegistryUtil.getCustomJspFileName(
+			customJspServletContextName, path);
+
+		if (FileAvailabilityUtil.isAvailable(servletContext, customPage)) {
+			return customPage;
+		}
+
+		return path;
+	}
+
 
 	public void setFormName(String formName) {
 		_formName = formName;
